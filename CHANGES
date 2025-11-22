@@ -1,4 +1,5 @@
 1.0.4
+  * NIP-91 AND-tag filters are now gated by config (default disabled) with a new max_an_tags limit
   * New config: maxReqFilterSize. This allows REQs with many more filters (jb55)
   * Default maxReqFilterSize was increased to 200
   * Update nix build file (jb55)

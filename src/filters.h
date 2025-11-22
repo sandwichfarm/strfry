@@ -140,10 +140,14 @@ struct NostrFilter {
     bool indexOnlyScans = false;
 
     explicit NostrFilter(const tao::json::value &filterObj, uint64_t maxFilterLimit) {
+        const auto &config = cfg();
+
         uint64_t numMajorFieldsNonTag = 0;
         flat_hash_set<char> tagKeySet;
         flat_hash_map<char, std::vector<std::string>> rawTagsOr;
         flat_hash_map<char, std::vector<std::string>> rawTagsAnd;
+        uint64_t andTagValueCount = 0;
+        uint64_t maxAndTags = config.relay__andTags__max_an_tags;
 
         if (!filterObj.is_object()) throw herr("provided filter is not an object");
 
@@ -164,13 +168,22 @@ struct NostrFilter {
                 numMajorFieldsNonTag++;
             } else if (k.starts_with('#') || k.starts_with('&')) {
                 bool isAnd = k.starts_with('&');
+                if (isAnd && !config.relay__andTags__enabled) throw herr("AND tags disabled");
+
                 if (k.size() != 2) throw herr(isAnd ? "unindexed AND tag filter" : "unindexed tag filter");
 
                 char tag = k[1];
                 tagKeySet.insert(tag);
 
+                const auto &arr = v.get_array();
+
+                if (isAnd) {
+                    andTagValueCount += arr.size();
+                    if (andTagValueCount > maxAndTags) throw herr("too many AND tag values");
+                }
+
                 auto &vec = isAnd ? rawTagsAnd[tag] : rawTagsOr[tag];
-                for (const auto &elem : v.get_array()) {
+                for (const auto &elem : arr) {
                     if (tag == 'p' || tag == 'e') {
                         vec.emplace_back(from_hex(elem.get_string(), false));
                     } else {
