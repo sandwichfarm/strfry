@@ -4,6 +4,13 @@ OPT  ?= -O3 -g
 
 include golpe/rules.mk
 
+# Override golpe's main.cpp rule to add hyphen-to-underscore command mapping
+# (avoids patching golpe submodule)
+build/main.cpp: golpe/main.cpp.tt golpe/gen-main.cpp.pl build/app_git_version.h
+	golpe/gen-main.cpp.pl
+	sed -i '/#include <iostream>/a #include <algorithm>' build/main.cpp
+	sed -i '/std::string command = args\["<command>"\]\.asString();/a\    std::replace(command.begin(), command.end(), '"'"'-'"'"', '"'"'_'"'"');' build/main.cpp
+
 LDLIBS += -lsecp256k1 -lzstd
 INCS += -Iexternal/negentropy/cpp
 
